@@ -4,14 +4,14 @@ import '@material/mwc-list/mwc-list-item';
 import type { Button } from '@material/mwc-button';
 import './data-set-element-editor.js';
 import './report-control-element-editor.js';
-import '../foundation/components/filtered-list.js';
-import type { FilteredList } from '../foundation/components/filtered-list.js';
+import '../foundation/components/oscd-filtered-list.js';
+import type { OscdFilteredList } from '../foundation/components/oscd-filtered-list.js';
 export declare class ReportControlEditor extends LitElement {
     /** The document being edited as provided to plugins by [[`OpenSCD`]]. */
     doc: XMLDocument;
     selectedReportControl?: Element;
     selectedDataSet?: Element | null;
-    selectionList: FilteredList;
+    selectionList: OscdFilteredList;
     selectReportControlButton: Button;
     /** Resets selected Report and its DataSet, if not existing in new doc */
     update(props: Map<string | number | symbol, unknown>): void;

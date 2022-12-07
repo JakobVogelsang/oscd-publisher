@@ -1,7 +1,7 @@
 import { LitElement, TemplateResult } from 'lit';
-import '../foundation/components/wizard-checkbox.js';
-import '../foundation/components/wizard-textfield.js';
-import '../foundation/components/wizard-select.js';
+import '../foundation/components/oscd-checkbox.js';
+import '../foundation/components/oscd-textfield.js';
+import '../foundation/components/oscd-select.js';
 export declare class ReportControlElementEditor extends LitElement {
     /** The document being edited as provided to plugins by [[`OpenSCD`]]. */
     doc: XMLDocument;

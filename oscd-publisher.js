@@ -8542,7 +8542,7 @@ TextField = __decorate([
  * `multiplier` if an SI `unit` is given.
  *
  * NB: Use `maybeValue: string | null` instead of `value` if `nullable`! */
-let WizardTextField = class WizardTextField extends TextField {
+let OscdTextfield = class OscdTextfield extends TextField {
     constructor() {
         super();
         /** Whether [[`maybeValue`]] may be `null` */
@@ -8688,40 +8688,40 @@ let WizardTextField = class WizardTextField extends TextField {
 };
 __decorate([
     e$5({ type: Boolean })
-], WizardTextField.prototype, "nullable", void 0);
+], OscdTextfield.prototype, "nullable", void 0);
 __decorate([
     e$5({ type: Array })
-], WizardTextField.prototype, "multipliers", void 0);
+], OscdTextfield.prototype, "multipliers", void 0);
 __decorate([
     e$5({ type: String })
-], WizardTextField.prototype, "multiplier", null);
+], OscdTextfield.prototype, "multiplier", null);
 __decorate([
     e$5({ type: String })
-], WizardTextField.prototype, "unit", void 0);
+], OscdTextfield.prototype, "unit", void 0);
 __decorate([
     t$1()
-], WizardTextField.prototype, "null", null);
+], OscdTextfield.prototype, "null", null);
 __decorate([
     e$5({ type: String })
-], WizardTextField.prototype, "maybeValue", null);
+], OscdTextfield.prototype, "maybeValue", null);
 __decorate([
     e$5({ type: String })
-], WizardTextField.prototype, "defaultValue", void 0);
+], OscdTextfield.prototype, "defaultValue", void 0);
 __decorate([
     e$5({ type: Array })
-], WizardTextField.prototype, "reservedValues", void 0);
+], OscdTextfield.prototype, "reservedValues", void 0);
 __decorate([
     i$2('mwc-switch')
-], WizardTextField.prototype, "nullSwitch", void 0);
+], OscdTextfield.prototype, "nullSwitch", void 0);
 __decorate([
     i$2('mwc-menu')
-], WizardTextField.prototype, "multiplierMenu", void 0);
+], OscdTextfield.prototype, "multiplierMenu", void 0);
 __decorate([
     i$2('mwc-icon-button')
-], WizardTextField.prototype, "multiplierButton", void 0);
-WizardTextField = __decorate([
-    e$6('wizard-textfield')
-], WizardTextField);
+], OscdTextfield.prototype, "multiplierButton", void 0);
+OscdTextfield = __decorate([
+    e$6('oscd-textfield')
+], OscdTextfield);
 
 const tAbstractConductingEquipment = [
     'TransformerWinding',
@@ -10607,23 +10607,23 @@ let DataSetElementEditor = class DataSetElementEditor extends s$1 {
         return this.element ? this.element.getAttribute('desc') : 'UNDEFINED';
     }
     renderContent() {
-        return y `<wizard-textfield
+        return y `<oscd-textfield
         label="name"
         .maybeValue=${this.name}
         helper="scl.name"
         required
         disabled
       >
-      </wizard-textfield>
-      <wizard-textfield
+      </oscd-textfield>
+      <oscd-textfield
         label="desc"
         .maybeValue=${this.desc}
         helper="scl.desc"
         nullable
         disabled
       >
-      </wizard-textfield>
-      <filtered-list
+      </oscd-textfield>
+      <oscd-filtered-list
         >${Array.from(this.element.querySelectorAll('FCDA')).map(fcda => {
             const [ldInst, prefix, lnClass, lnInst, doName, daName, fc] = [
                 'ldInst',
@@ -10640,7 +10640,7 @@ let DataSetElementEditor = class DataSetElementEditor extends s$1 {
               >${`${ldInst}/${prefix}${lnClass}${lnInst}`}</span
             >
           </mwc-list-item>`;
-        })}</filtered-list
+        })}</oscd-filtered-list
       >`;
     }
     render() {
@@ -10969,7 +10969,7 @@ Checkbox = __decorate([
 ], Checkbox);
 
 /** A potentially `nullable` labelled checkbox. */
-let WizardCheckbox = class WizardCheckbox extends s$1 {
+let OscdCheckbox = class OscdCheckbox extends s$1 {
     constructor() {
         super(...arguments);
         this.label = '';
@@ -11078,43 +11078,43 @@ let WizardCheckbox = class WizardCheckbox extends s$1 {
 };
 __decorate([
     e$5({ type: String })
-], WizardCheckbox.prototype, "label", void 0);
+], OscdCheckbox.prototype, "label", void 0);
 __decorate([
     e$5({ type: String })
-], WizardCheckbox.prototype, "helper", void 0);
+], OscdCheckbox.prototype, "helper", void 0);
 __decorate([
     e$5({ type: Boolean })
-], WizardCheckbox.prototype, "nullable", void 0);
+], OscdCheckbox.prototype, "nullable", void 0);
 __decorate([
     e$5({ type: Boolean })
-], WizardCheckbox.prototype, "defaultChecked", void 0);
+], OscdCheckbox.prototype, "defaultChecked", void 0);
 __decorate([
     e$5({ type: String })
-], WizardCheckbox.prototype, "maybeValue", null);
+], OscdCheckbox.prototype, "maybeValue", null);
 __decorate([
     e$5({ type: Boolean })
-], WizardCheckbox.prototype, "disabled", void 0);
+], OscdCheckbox.prototype, "disabled", void 0);
 __decorate([
     t$1()
-], WizardCheckbox.prototype, "null", null);
+], OscdCheckbox.prototype, "null", null);
 __decorate([
     t$1()
-], WizardCheckbox.prototype, "checked", null);
+], OscdCheckbox.prototype, "checked", null);
 __decorate([
     t$1()
-], WizardCheckbox.prototype, "deactivateCheckbox", void 0);
+], OscdCheckbox.prototype, "deactivateCheckbox", void 0);
 __decorate([
     t$1()
-], WizardCheckbox.prototype, "formfieldLabel", null);
+], OscdCheckbox.prototype, "formfieldLabel", null);
 __decorate([
     i$2('mwc-switch')
-], WizardCheckbox.prototype, "nullSwitch", void 0);
+], OscdCheckbox.prototype, "nullSwitch", void 0);
 __decorate([
     i$2('mwc-checkbox')
-], WizardCheckbox.prototype, "checkbox", void 0);
-WizardCheckbox = __decorate([
-    e$6('wizard-checkbox')
-], WizardCheckbox);
+], OscdCheckbox.prototype, "checkbox", void 0);
+OscdCheckbox = __decorate([
+    e$6('oscd-checkbox')
+], OscdCheckbox);
 
 /**
  * @license
@@ -12708,7 +12708,7 @@ Select = __decorate([
 /** A potentially `nullable` `Select`.
  *
  * NB: Use `maybeValue: string | null` instead of `value` if `nullable`! */
-let WizardSelect = class WizardSelect extends Select {
+let OscdSelect = class OscdSelect extends Select {
     constructor() {
         super();
         /** Whether [[`maybeValue`]] may be `null` */
@@ -12797,25 +12797,25 @@ let WizardSelect = class WizardSelect extends Select {
 };
 __decorate([
     e$5({ type: Boolean })
-], WizardSelect.prototype, "nullable", void 0);
+], OscdSelect.prototype, "nullable", void 0);
 __decorate([
     t$1()
-], WizardSelect.prototype, "null", null);
+], OscdSelect.prototype, "null", null);
 __decorate([
     e$5({ type: String })
-], WizardSelect.prototype, "maybeValue", null);
+], OscdSelect.prototype, "maybeValue", null);
 __decorate([
     e$5({ type: String })
-], WizardSelect.prototype, "defaultValue", void 0);
+], OscdSelect.prototype, "defaultValue", void 0);
 __decorate([
     e$5({ type: Array })
-], WizardSelect.prototype, "reservedValues", void 0);
+], OscdSelect.prototype, "reservedValues", void 0);
 __decorate([
     i$2('mwc-switch')
-], WizardSelect.prototype, "nullSwitch", void 0);
-WizardSelect = __decorate([
-    e$6('wizard-select')
-], WizardSelect);
+], OscdSelect.prototype, "nullSwitch", void 0);
+OscdSelect = __decorate([
+    e$6('oscd-select')
+], OscdSelect);
 
 const typeBase = {
     IP: '([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])[.]([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])[.]([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])[.]([0-9]{1,2}|1[0-9]{2}|2[0-4][0-9]|25[0-5])',
@@ -12947,13 +12947,13 @@ let ReportControlElementEditor = class ReportControlElementEditor extends s$1 {
             entryID,
             configRef,
             bufOvfl,
-        }).map(([key, value]) => y `<wizard-checkbox
+        }).map(([key, value]) => y `<oscd-checkbox
             label="${key}"
             .maybeValue=${value}
             nullable
             helper="scl.key"
             disabled
-          ></wizard-checkbox>`)}`;
+          ></oscd-checkbox>`)}`;
     }
     renderTrgOpsContent() {
         const [dchg, qchg, dupd, period, gi] = [
@@ -12964,13 +12964,13 @@ let ReportControlElementEditor = class ReportControlElementEditor extends s$1 {
             'gi',
         ].map(attr => { var _a, _b; return (_b = (_a = this.element.querySelector('TrgOps')) === null || _a === void 0 ? void 0 : _a.getAttribute(attr)) !== null && _b !== void 0 ? _b : null; });
         return y ` <h3>Trigger Options</h3>
-      ${Object.entries({ dchg, qchg, dupd, period, gi }).map(([key, value]) => y `<wizard-checkbox
+      ${Object.entries({ dchg, qchg, dupd, period, gi }).map(([key, value]) => y `<oscd-checkbox
             label="${key}"
             .maybeValue=${value}
             nullable
             helper="scl.key"
             disabled
-          ></wizard-checkbox>`)}`;
+          ></oscd-checkbox>`)}`;
     }
     renderChildElements() {
         return y `<div class="content">
@@ -12990,7 +12990,7 @@ let ReportControlElementEditor = class ReportControlElementEditor extends s$1 {
         ].map(attr => { var _a; return (_a = this.element) === null || _a === void 0 ? void 0 : _a.getAttribute(attr); });
         const max = (_b = (_a = this.element.querySelector('RptEnabled')) === null || _a === void 0 ? void 0 : _a.getAttribute('max')) !== null && _b !== void 0 ? _b : null;
         return y `<div class="content">
-      <wizard-textfield
+      <oscd-textfield
         label="name"
         .maybeValue=${name}
         helper="'scl.name')}"
@@ -13000,36 +13000,36 @@ let ReportControlElementEditor = class ReportControlElementEditor extends s$1 {
         maxLength="${maxLength.cbName}"
         dialogInitialFocus
         disabled
-      ></wizard-textfield
-      ><wizard-textfield
+      ></oscd-textfield
+      ><oscd-textfield
         label="desc"
         .maybeValue=${desc}
         nullable
         helper="'scl.desc')}"
         disabled
-      ></wizard-textfield
-      ><wizard-checkbox
+      ></oscd-textfield
+      ><oscd-checkbox
         label="buffered"
         .maybeValue=${buffered}
         helper="'scl.buffered')}"
         disabled
-      ></wizard-checkbox
-      ><wizard-textfield
+      ></oscd-checkbox
+      ><oscd-textfield
         label="rptID"
         .maybeValue=${rptID}
         nullable
         required
         helper="'report.rptID')}"
         disabled
-      ></wizard-textfield
-      ><wizard-checkbox
+      ></oscd-textfield
+      ><oscd-checkbox
         label="indexed"
         .maybeValue=${indexed}
         nullable
         helper="'scl.indexed')}"
         disabled
-      ></wizard-checkbox
-      ><wizard-textfield
+      ></oscd-checkbox
+      ><oscd-textfield
         label="max Clients"
         .maybeValue=${max}
         helper="'scl.maxReport')}"
@@ -13037,8 +13037,8 @@ let ReportControlElementEditor = class ReportControlElementEditor extends s$1 {
         type="number"
         suffix="#"
         disabled
-      ></wizard-textfield
-      ><wizard-textfield
+      ></oscd-textfield
+      ><oscd-textfield
         label="bufTime"
         .maybeValue=${bufTime}
         helper="'scl.bufTime')}"
@@ -13048,8 +13048,8 @@ let ReportControlElementEditor = class ReportControlElementEditor extends s$1 {
         min="0"
         suffix="ms"
         disabled
-      ></wizard-textfield
-      ><wizard-textfield
+      ></oscd-textfield
+      ><oscd-textfield
         label="intgPd"
         .maybeValue=${intgPd}
         helper="'scl.intgPd')}"
@@ -13059,7 +13059,7 @@ let ReportControlElementEditor = class ReportControlElementEditor extends s$1 {
         min="0"
         suffix="ms"
         disabled
-      ></wizard-textfield>
+      ></oscd-textfield>
     </div>`;
     }
     render() {
@@ -13214,9 +13214,9 @@ CheckListItem = __decorate([
 ], CheckListItem);
 
 function slotItem(item) {
-    if (!item.closest('filtered-list') || !item.parentElement)
+    if (!item.closest('oscd-filtered-list') || !item.parentElement)
         return item;
-    if (item.parentElement instanceof FilteredList)
+    if (item.parentElement instanceof OscdFilteredList)
         return item;
     return slotItem(item.parentElement);
 }
@@ -13247,7 +13247,7 @@ function hideFiltered(item, searchText) {
 /**
  * A mwc-list with mwc-textfield that filters the list items for given or separated terms
  */
-let FilteredList = class FilteredList extends ListBase {
+let OscdFilteredList = class OscdFilteredList extends ListBase {
     constructor() {
         super();
         /** Whether the check all option (checkbox next to search text field) is activated */
@@ -13316,7 +13316,7 @@ let FilteredList = class FilteredList extends ListBase {
       ${super.render()}`;
     }
 };
-FilteredList.styles = i$5 `
+OscdFilteredList.styles = i$5 `
     ${r$2(List.styles)}
 
     #tfcontainer {
@@ -13351,25 +13351,25 @@ FilteredList.styles = i$5 `
   `;
 __decorate([
     e$5({ type: String })
-], FilteredList.prototype, "searchFieldLabel", void 0);
+], OscdFilteredList.prototype, "searchFieldLabel", void 0);
 __decorate([
     e$5({ type: Boolean })
-], FilteredList.prototype, "disableCheckAll", void 0);
+], OscdFilteredList.prototype, "disableCheckAll", void 0);
 __decorate([
     t$1()
-], FilteredList.prototype, "existCheckListItem", null);
+], OscdFilteredList.prototype, "existCheckListItem", null);
 __decorate([
     t$1()
-], FilteredList.prototype, "isAllSelected", null);
+], OscdFilteredList.prototype, "isAllSelected", null);
 __decorate([
     t$1()
-], FilteredList.prototype, "isSomeSelected", null);
+], OscdFilteredList.prototype, "isSomeSelected", null);
 __decorate([
     i$2('mwc-textfield')
-], FilteredList.prototype, "searchField", void 0);
-FilteredList = __decorate([
-    e$6('filtered-list')
-], FilteredList);
+], OscdFilteredList.prototype, "searchField", void 0);
+OscdFilteredList = __decorate([
+    e$6('oscd-filtered-list')
+], OscdFilteredList);
 
 function updateElementReference(newDoc, oldElement) {
     if (!oldElement || !oldElement.closest('SCL'))
@@ -13507,7 +13507,7 @@ let ReportControlEditor = class ReportControlEditor extends s$1 {
         return y ``;
     }
     renderSelectionList() {
-        return y `<filtered-list
+        return y `<oscd-filtered-list
       activatable
       class="selectionlist"
       @action=${this.selectReportControl}
@@ -13536,7 +13536,7 @@ let ReportControlEditor = class ReportControlEditor extends s$1 {
               <mwc-icon slot="graphic">${reportIcon}</mwc-icon>
             </mwc-list-item>`);
             return [ieditem, ...reports];
-        })}</filtered-list
+        })}</oscd-filtered-list
     >`;
     }
     renderToggleButton() {
@@ -13642,29 +13642,29 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
           ?checked="${hasInstType}"
           disabled
         ></mwc-checkbox></mwc-formfield
-      >${Object.entries(attributes).map(([key, value]) => y `<wizard-textfield
+      >${Object.entries(attributes).map(([key, value]) => y `<oscd-textfield
             label="${key}"
             ?nullable=${typeNullable[key]}
             .maybeValue=${value}
             pattern="${typePattern[key]}"
             required
             disabled
-          ></wizard-textfield>`)}<wizard-textfield
+          ></oscd-textfield>`)}<oscd-textfield
         label="MinTime"
         .maybeValue=${minTime}
         nullable
         suffix="ms"
         type="number"
         disabled
-      ></wizard-textfield
-      ><wizard-textfield
+      ></oscd-textfield
+      ><oscd-textfield
         label="MaxTime"
         .maybeValue=${maxTime}
         nullable
         suffix="ms"
         type="number"
         disabled
-      ></wizard-textfield>
+      ></oscd-textfield>
     </div>`;
     }
     renderGseControlContent() {
@@ -13677,7 +13677,7 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
             'securityEnabled',
         ].map(attr => { var _a; return (_a = this.element) === null || _a === void 0 ? void 0 : _a.getAttribute(attr); });
         return y `<div class="content">
-      <wizard-textfield
+      <oscd-textfield
         label="name"
         .maybeValue=${name}
         helper="scl.name"
@@ -13687,15 +13687,15 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
         maxLength="${maxLength.cbName}"
         dialogInitialFocus
         disabled
-      ></wizard-textfield>
-      <wizard-textfield
+      ></oscd-textfield>
+      <oscd-textfield
         label="desc"
         .maybeValue=${desc}
         nullable
         helper="scl.desc"
         disabled
-      ></wizard-textfield>
-      <wizard-select
+      ></oscd-textfield>
+      <oscd-select
         label="type"
         .maybeValue=${type}
         helper="scl.type"
@@ -13704,24 +13704,24 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
         disabled
         >${['GOOSE', 'GSSE'].map(gseControlType => y `<mwc-list-item value="${gseControlType}"
               >${gseControlType}</mwc-list-item
-            >`)}</wizard-select
+            >`)}</oscd-select
       >
-      <wizard-textfield
+      <oscd-textfield
         label="appID"
         .maybeValue=${appID}
         helper="scl.id"
         required
         validationMessage="textfield.nonempty"
         disabled
-      ></wizard-textfield>
-      <wizard-checkbox
+      ></oscd-textfield>
+      <oscd-checkbox
         label="fixedOffs"
         .maybeValue=${fixedOffs}
         nullable
         helper="scl.fixedOffs"
         disabled
-      ></wizard-checkbox>
-      <wizard-select
+      ></oscd-checkbox>
+      <oscd-select
         label="securityEnabled"
         .maybeValue=${securityEnabled}
         nullable
@@ -13730,7 +13730,7 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
         disabled
         >${['None', 'Signature', 'SignatureAndEncryption'].map(securityType => y `<mwc-list-item value="${securityType}"
               >${securityType}</mwc-list-item
-            >`)}</wizard-select
+            >`)}</oscd-select
       >
     </div>`;
     }
@@ -13844,7 +13844,7 @@ let GseControlEditor = class GseControlEditor extends s$1 {
         return y ``;
     }
     renderSelectionList() {
-        return y `<filtered-list
+        return y `<oscd-filtered-list
       activatable
       @action=${this.selectGSEControl}
       class="selectionlist"
@@ -13873,7 +13873,7 @@ let GseControlEditor = class GseControlEditor extends s$1 {
               <mwc-icon slot="graphic">${gooseIcon}</mwc-icon>
             </mwc-list-item>`);
             return [ieditem, ...gseControls];
-        })}</filtered-list
+        })}</oscd-filtered-list
     >`;
     }
     renderToggleButton() {
@@ -13970,7 +13970,7 @@ let DataSetEditor = class DataSetEditor extends s$1 {
         return y ``;
     }
     renderSelectionList() {
-        return y `<filtered-list
+        return y `<oscd-filtered-list
       activatable
       @action=${this.selectDataSet}
       class="selectionlist"
@@ -13995,7 +13995,7 @@ let DataSetEditor = class DataSetEditor extends s$1 {
               ><span slot="secondary">${identity(dataSet)}</span>
             </mwc-list-item>`);
             return [ieditem, ...dataSets];
-        })}</filtered-list
+        })}</oscd-filtered-list
     >`;
     }
     renderToggleButton() {
@@ -14072,14 +14072,14 @@ let SampledValueControlElementEditor = class SampledValueControlElementEditor ex
           ?checked="${hasInstType}"
           disabled
         ></mwc-checkbox></mwc-formfield
-      >${Object.entries(attributes).map(([key, value]) => y `<wizard-textfield
+      >${Object.entries(attributes).map(([key, value]) => y `<oscd-textfield
             label="${key}"
             ?nullable=${typeNullable[key]}
             .maybeValue=${value}
             pattern="${typePattern[key]}"
             required
             disabled
-          ></wizard-textfield>`)}`;
+          ></oscd-textfield>`)}`;
     }
     renderSmvOptsContent() {
         const [refreshTime, sampleRate, dataSet, security, synchSourceId] = [
@@ -14096,13 +14096,13 @@ let SampledValueControlElementEditor = class SampledValueControlElementEditor ex
             dataSet,
             security,
             synchSourceId,
-        }).map(([key, value]) => y `<wizard-checkbox
+        }).map(([key, value]) => y `<oscd-checkbox
             label="${key}"
             .maybeValue=${value}
             nullable
             helper="scl.key"
             disabled
-          ></wizard-checkbox>`)}`;
+          ></oscd-checkbox>`)}`;
     }
     renderOtherElements() {
         return y `<div class="content">
@@ -14121,7 +14121,7 @@ let SampledValueControlElementEditor = class SampledValueControlElementEditor ex
             'securityEnabled',
         ].map(attr => { var _a; return (_a = this.element) === null || _a === void 0 ? void 0 : _a.getAttribute(attr); });
         return y `<div class="content">
-      <wizard-textfield
+      <oscd-textfield
         label="name"
         .maybeValue=${name}
         helper="scl.name"
@@ -14131,49 +14131,49 @@ let SampledValueControlElementEditor = class SampledValueControlElementEditor ex
         maxLength="${maxLength.cbName}"
         dialogInitialFocus
         disabled
-      ></wizard-textfield>
-      <wizard-textfield
+      ></oscd-textfield>
+      <oscd-textfield
         label="desc"
         .maybeValue=${desc}
         nullable
         helper="scl.desc')}"
         disabled
-      ></wizard-textfield>
+      ></oscd-textfield>
       ${multicast === 'true'
             ? y ``
-            : y `<wizard-checkbox
+            : y `<oscd-checkbox
             label="multicast"
             .maybeValue=${multicast}
             helper="scl.multicast')}"
             disabled
-          ></wizard-checkbox>`}
-      <wizard-textfield
+          ></oscd-checkbox>`}
+      <oscd-textfield
         label="smvID"
         .maybeValue=${smvID}
         helper="scl.id')}"
         required
-        validationMessage="textfield.nonempty')}"
+        voscd-textfield="textfield.nonempty')}"
         disabled
-      ></wizard-textfield>
-      <wizard-select
+      ></oscd-textfield>
+      <oscd-select
         label="smpMod"
         .maybeValue=${smpMod}
         nullable
         required
         helper="scl.smpMod')}"
         disabled
-        >${['SmpPerPeriod', 'SmpPerSec', 'SecPerSmp'].map(option => y `<mwc-list-item value="${option}">${option}</mwc-list-item>`)}</wizard-select
+        >${['SmpPerPeriod', 'SmpPerSec', 'SecPerSmp'].map(option => y `<mwc-list-item value="${option}">${option}</mwc-list-item>`)}</oscd-select
       >
-      <wizard-textfield
+      <oscd-textfield
         label="smpRate"
         .maybeValue=${smpRate}
         helper="scl.smpRate')}"
         required
         type="number"
-        min="0"
-        disabled
-      ></wizard-textfield>
-      <wizard-textfield
+        moscd-textfield
+        oscd-textfield
+      ></oscd-textfield>
+      <oscd-textfield
         label="nofASDU"
         .maybeValue=${nofASDU}
         helper="scl.nofASDU')}"
@@ -14181,15 +14181,15 @@ let SampledValueControlElementEditor = class SampledValueControlElementEditor ex
         type="number"
         min="0"
         disabled
-      ></wizard-textfield>
-      <wizard-select
+      ></oscd-textfield>
+      <oscd-select
         label="securityEnabled"
         .maybeValue=${securityEnabled}
         nullable
         required
         helper="scl.securityEnable')}"
         disabled
-        >${['None', 'Signature', 'SignatureAndEncryption'].map(type => y `<mwc-list-item value="${type}">${type}</mwc-list-item>`)}</wizard-select
+        >${['None', 'Signature', 'SignatureAndEncryption'].map(type => y `<mwc-list-item value="${type}">${type}</mwc-list-item>`)}</oscd-select
       >
     </div>`;
     }
@@ -14306,7 +14306,7 @@ let SampledValueControlEditor = class SampledValueControlEditor extends s$1 {
         return y ``;
     }
     renderSelectionList() {
-        return y `<filtered-list
+        return y `<oscd-filtered-list
       activatable
       @action=${this.selectSMVControl}
       class="selectionlist"
@@ -14335,7 +14335,7 @@ let SampledValueControlEditor = class SampledValueControlEditor extends s$1 {
               <mwc-icon slot="graphic">${smvIcon}</mwc-icon>
             </mwc-list-item>`);
             return [ieditem, ...sampledValueControls];
-        })}</filtered-list
+        })}</oscd-filtered-list
     >`;
     }
     renderToggleButton() {

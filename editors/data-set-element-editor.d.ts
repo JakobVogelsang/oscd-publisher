@@ -1,6 +1,6 @@
 import { LitElement, TemplateResult } from 'lit';
 import '@material/mwc-list/mwc-list-item';
-import '../foundation/components/wizard-textfield.js';
+import '../foundation/components/oscd-textfield.js';
 export declare class DataSetElementEditor extends LitElement {
     /** The document being edited as provided to plugins by [[`OpenSCD`]]. */
     doc: XMLDocument;
