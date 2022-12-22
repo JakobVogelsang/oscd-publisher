@@ -2944,6 +2944,9 @@ ListItem = __decorate([
     e$7('mwc-list-item')
 ], ListItem);
 
+function isRemove(edit) {
+    return (edit.parent === undefined && edit.node !== undefined);
+}
 function newEditEvent(edit) {
     return new CustomEvent('oscd-edit', {
         composed: true,
@@ -10614,6 +10617,280 @@ function idNamingIdentity(e) {
     return `#${e.id}`;
 }
 
+function subscriberSupervision(ctrlBlock, subscriberIed) {
+    const supervisionType = ctrlBlock.tagName === 'GSEControl' ? 'LGOS' : 'LSVS';
+    const valElement = Array.from(subscriberIed.querySelectorAll(`LN0[lnClass="${supervisionType}"] > DOI > DAI > Val,
+       LN[lnClass="${supervisionType}"] > DOI > DAI > Val`)).find(val => val.textContent === controlBlockObjectReference(ctrlBlock));
+    if (!valElement)
+        return null;
+    const ln = valElement.closest('LN0, LN');
+    const doi = valElement.closest('DOI');
+    return { ln, doi };
+}
+/** @returns Whether `setSrcRef` can edited by SCL editor */
+function isSrcRefEditable(ctrlBlock, subscriberIed) {
+    const supervision = subscriberSupervision(ctrlBlock, subscriberIed);
+    if (!supervision)
+        return false;
+    const rootNode = supervision.ln.ownerDocument;
+    const lnClass = supervision.ln.getAttribute('lnClass');
+    const goOrSvCBRef = rootNode.querySelector(`DataTypeTemplates > 
+      LNodeType[id="${supervision.ln.getAttribute('lnType')}"][lnClass="${lnClass}"] > DO[name="${lnClass === 'LGOS' ? 'GoCBRef' : 'SvCBRef'}"]`);
+    const setSrcRef = rootNode.querySelector(`DataTypeTemplates > DOType[id="${goOrSvCBRef === null || goOrSvCBRef === void 0 ? void 0 : goOrSvCBRef.getAttribute('type')}"] > DA[name="setSrcRef"]`);
+    return (((setSrcRef === null || setSrcRef === void 0 ? void 0 : setSrcRef.getAttribute('valKind')) === 'Conf' ||
+        (setSrcRef === null || setSrcRef === void 0 ? void 0 : setSrcRef.getAttribute('valKind')) === 'RO') &&
+        setSrcRef.getAttribute('valImport') === 'true');
+}
+/** Whether there is another subscribed ExtRef of the same ctrlBlock */
+function otherCtrlBlockSubscriberData(extRefs) {
+    const [srcCBName, srcLDInst, srcLNClass, iedName, srcPrefix, srcLNInst, serviceType,] = [
+        'srcCBName',
+        'srcLDInst',
+        'srcLNClass',
+        'iedName',
+        'srcPrefix',
+        'srcLNInst',
+        'serviceType',
+    ].map(attr => extRefs[0].getAttribute(attr));
+    const parentIed = extRefs[0].closest('IED');
+    return Array.from(parentIed.getElementsByTagName('ExtRef')).some(otherExtRef => {
+        var _a, _b;
+        return !extRefs.includes(otherExtRef) &&
+            ((_a = otherExtRef.getAttribute('srcPrefix')) !== null && _a !== void 0 ? _a : '') === (srcPrefix !== null && srcPrefix !== void 0 ? srcPrefix : '') &&
+            ((_b = otherExtRef.getAttribute('srcLNInst')) !== null && _b !== void 0 ? _b : '') === (srcLNInst !== null && srcLNInst !== void 0 ? srcLNInst : '') &&
+            otherExtRef.getAttribute('srcCBName') === srcCBName &&
+            otherExtRef.getAttribute('srcLDInst') === srcLDInst &&
+            otherExtRef.getAttribute('srcLNClass') === srcLNClass &&
+            otherExtRef.getAttribute('iedName') === iedName &&
+            otherExtRef.getAttribute('serviceType') === serviceType;
+    });
+}
+/**
+ * @param extRefs - a set of external references
+ * @returns node's representing subscription supervision
+ */
+function removeSubscriptionSupervision(extRefs) {
+    var _a;
+    if (extRefs.length === 0)
+        return [];
+    const isEd1 = !((_a = extRefs[0].ownerDocument
+        .querySelector('SCL')) === null || _a === void 0 ? void 0 : _a.hasAttribute('version'));
+    if (isEd1)
+        return [];
+    const groupedExtRefs = {};
+    extRefs.forEach(extRef => {
+        const ctrlBlock = controlBlock(extRef);
+        if (ctrlBlock) {
+            const ctrlBlockRef = controlBlockObjectReference(ctrlBlock);
+            if (groupedExtRefs[ctrlBlockRef])
+                groupedExtRefs[ctrlBlockRef].extRefs.push(extRef);
+            else
+                groupedExtRefs[ctrlBlockRef] = {
+                    extRefs: [extRef],
+                    ctrlBlock,
+                    subscriberIed: extRef.closest('IED'),
+                };
+        }
+    });
+    return Object.values(groupedExtRefs)
+        .map(extRefGroup => {
+        if (otherCtrlBlockSubscriberData(extRefGroup.extRefs) ||
+            !isSrcRefEditable(extRefGroup.ctrlBlock, extRefGroup.subscriberIed))
+            return null;
+        const { ln, doi } = subscriberSupervision(extRefGroup.ctrlBlock, extRefGroup.subscriberIed);
+        // do not remove logical nodes LGOS, LSVS unless privately tagged
+        const canRemoveLn = ln.querySelector(':scope > Private[type="OpenSCD.create"]');
+        return canRemoveLn ? ln : doi;
+    })
+        .filter(element => element).map(node => ({ node }));
+}
+
+/* eslint-disable import/no-extraneous-dependencies */
+const serviceType = {
+    GSEControl: 'GOOSE',
+    SampledValueControl: 'SMV',
+    ReportControl: 'Report',
+};
+function duplicates(arr, val) {
+    let count = 0;
+    // eslint-disable-next-line no-plusplus
+    for (const value of arr)
+        if (value === val)
+            count++;
+    return count;
+}
+function correctInputs(extRefActions) {
+    const removeInputs = [];
+    extRefActions
+        .filter(extRefAction => isRemove(extRefAction))
+        .map(removeAction => removeAction.node.parentElement)
+        .filter(input => input).forEach((input, _index, inputs) => {
+        const number = duplicates(inputs, input);
+        if (input.querySelectorAll('ExtRef').length === number &&
+            !removeInputs.some(removeInput => removeInput.node === input))
+            removeInputs.push({ node: input });
+    });
+    return extRefActions.concat(removeInputs);
+}
+function unsubscribe(extRefs) {
+    const actions = [];
+    extRefs.forEach(extRef => {
+        if (extRef.getAttribute('intAddr'))
+            actions.push({
+                element: extRef,
+                attributes: {
+                    iedName: null,
+                    ldInst: null,
+                    prefix: null,
+                    lnClass: null,
+                    lnInst: null,
+                    doName: null,
+                    daName: null,
+                    srcLDInst: null,
+                    srcPrefix: null,
+                    srcLNClass: null,
+                    srcLNInst: null,
+                    srcCBName: null,
+                    serviceType: null,
+                },
+            });
+        else
+            actions.push({ node: extRef });
+    });
+    return correctInputs(actions).concat(removeSubscriptionSupervision(extRefs));
+}
+/** @returns Whether a ExtRef to FCDA reference match */
+function matchExtRefFcda(extRef, fcda) {
+    var _a, _b, _c, _d, _e, _f;
+    return (extRef.getAttribute('ldInst') === fcda.getAttribute('ldInst') &&
+        ((_a = extRef.getAttribute('prefix')) !== null && _a !== void 0 ? _a : '') ===
+            ((_b = fcda.getAttribute('prefix')) !== null && _b !== void 0 ? _b : '') &&
+        extRef.getAttribute('lnClass') === fcda.getAttribute('lnClass') &&
+        ((_c = extRef.getAttribute('lnInst')) !== null && _c !== void 0 ? _c : '') ===
+            ((_d = fcda.getAttribute('lnInst')) !== null && _d !== void 0 ? _d : '') &&
+        extRef.getAttribute('doName') === fcda.getAttribute('doName') &&
+        ((_e = extRef.getAttribute('daName')) !== null && _e !== void 0 ? _e : '') ===
+            ((_f = fcda.getAttribute('daName')) !== null && _f !== void 0 ? _f : ''));
+}
+/** @returns Whether src... type ExtRef attributes match */
+function matchExtRefCtrlBlockAttr(extRef, ctrlBlock) {
+    var _a, _b, _c, _d, _e, _f, _g;
+    const cbName = ctrlBlock.getAttribute('name');
+    const srcLDInst = (_a = ctrlBlock.closest('LDevice')) === null || _a === void 0 ? void 0 : _a.getAttribute('inst');
+    const srcPrefix = (_c = (_b = ctrlBlock.closest('LN0, LN')) === null || _b === void 0 ? void 0 : _b.getAttribute('prefix')) !== null && _c !== void 0 ? _c : '';
+    const srcLNClass = (_d = ctrlBlock.closest('LN0, LN')) === null || _d === void 0 ? void 0 : _d.getAttribute('lnClass');
+    const srcLNInst = (_e = ctrlBlock.closest('LN0, LN')) === null || _e === void 0 ? void 0 : _e.getAttribute('inst');
+    return (extRef.getAttribute('srcCBName') === cbName &&
+        extRef.getAttribute('srcLDInst') === srcLDInst &&
+        ((_f = extRef.getAttribute('srcPrefix')) !== null && _f !== void 0 ? _f : '') === srcPrefix &&
+        ((_g = extRef.getAttribute('srcLNInst')) !== null && _g !== void 0 ? _g : '') === srcLNInst &&
+        extRef.getAttribute('srcLNClass') === srcLNClass &&
+        extRef.getAttribute('serviceType') === serviceType[ctrlBlock.tagName]);
+}
+
+function findCtrlBlockSubscription(ctrlBlock) {
+    const doc = ctrlBlock.ownerDocument;
+    const iedName = ctrlBlock.closest('IED').getAttribute('name');
+    return Array.from(doc.querySelectorAll(`ExtRef[iedName="${iedName}"]`)).filter(extRef => matchExtRefCtrlBlockAttr(extRef, ctrlBlock));
+}
+/** @returns object reference acc. IEC 61850-7-3 for control block elements */
+function controlBlockObjectReference(ctrlBlock) {
+    var _a, _b, _c, _d;
+    const iedName = (_a = ctrlBlock.closest('IED')) === null || _a === void 0 ? void 0 : _a.getAttribute('name');
+    const ldInst = (_b = ctrlBlock.closest('LDevice')) === null || _b === void 0 ? void 0 : _b.getAttribute('inst');
+    const parentLn = ctrlBlock.closest('LN,LN0');
+    const prefix = (_c = parentLn === null || parentLn === void 0 ? void 0 : parentLn.getAttribute('prefix')) !== null && _c !== void 0 ? _c : '';
+    const lnClass = parentLn === null || parentLn === void 0 ? void 0 : parentLn.getAttribute('lnClass');
+    const lnInst = (_d = parentLn === null || parentLn === void 0 ? void 0 : parentLn.getAttribute('inst')) !== null && _d !== void 0 ? _d : '';
+    const cbName = ctrlBlock.getAttribute('name');
+    if (!iedName || !ldInst || !lnClass || !cbName)
+        return null;
+    return `${iedName}${ldInst}/${prefix}${lnClass}${lnInst}.${cbName}`;
+}
+/** @returns control block or null for a given external reference */
+function controlBlock(extRef) {
+    var _a;
+    const [iedName, srcLDInst, srcPrefix, srcLNClass, srcLNInst, srcCBName] = [
+        'iedName',
+        'srcLDInst',
+        'srcPrefix',
+        'srcLNClass',
+        'srcLNInst',
+        'srcCBName',
+    ].map(attr => { var _a; return (_a = extRef.getAttribute(attr)) !== null && _a !== void 0 ? _a : ''; });
+    return ((_a = Array.from(extRef.ownerDocument.querySelectorAll(`IED[name="${iedName}"] ReportControl, 
+        IED[name="${iedName}"] GSEControl, 
+        IED[name="${iedName}"] SampledValueControl`)).find(cBlock => {
+        var _a;
+        return cBlock.closest('LDevice').getAttribute('inst') === srcLDInst &&
+            ((_a = cBlock.closest('LN, LN0').getAttribute('prefix')) !== null && _a !== void 0 ? _a : '') ===
+                srcPrefix &&
+            cBlock.closest('LN, LN0').getAttribute('lnClass') === srcLNClass &&
+            cBlock.closest('LN, LN0').getAttribute('inst') === srcLNInst &&
+            cBlock.getAttribute('name') === srcCBName;
+    })) !== null && _a !== void 0 ? _a : null);
+}
+/** @returns control blocks for a given data attribute or data set */
+function controlBlocks(fcdaOrDataSet) {
+    var _a, _b;
+    const datSet = (_a = fcdaOrDataSet.closest('DataSet')) === null || _a === void 0 ? void 0 : _a.getAttribute('name');
+    const parentLn = fcdaOrDataSet.closest('LN0, LN');
+    return Array.from((_b = parentLn === null || parentLn === void 0 ? void 0 : parentLn.querySelectorAll(`:scope > ReportControl[datSet="${datSet}"],
+             :scope > GSEControl[datSet="${datSet}"],
+             :scope > SampledValueControl[datSet="${datSet}"]`)) !== null && _b !== void 0 ? _b : []);
+}
+/** @returns Action array removing control block and its referenced data */
+function removeControlBlock(ctrlBlock) {
+    var _a;
+    const ctrlBlockRemoveAction = [{ node: ctrlBlock }];
+    const dataSet = (_a = ctrlBlock.parentElement) === null || _a === void 0 ? void 0 : _a.querySelector(`DataSet[name="${ctrlBlock.getAttribute('datSet')}"]`);
+    if (!dataSet)
+        return ctrlBlockRemoveAction;
+    const multiUseDataSet = controlBlocks(dataSet).length > 1;
+    if (multiUseDataSet)
+        return ctrlBlockRemoveAction.concat(unsubscribe(findCtrlBlockSubscription(ctrlBlock)));
+    return ctrlBlockRemoveAction.concat(removeDataSet(dataSet));
+}
+
+function findFcdaSubscription(fcda) {
+    var _a, _b;
+    const doc = fcda.ownerDocument;
+    const iedName = (_a = fcda.closest('IED')) === null || _a === void 0 ? void 0 : _a.getAttribute('name');
+    if (!iedName)
+        return [];
+    const isEd1 = !((_b = fcda.ownerDocument
+        .querySelector('SCL')) === null || _b === void 0 ? void 0 : _b.getAttribute('version'));
+    if (isEd1)
+        return Array.from(doc.querySelectorAll(`ExtRef[iedName="${iedName}"]`)).filter(extRef => matchExtRefFcda(extRef, fcda));
+    return controlBlocks(fcda).flatMap(controlBlock => Array.from(doc.querySelectorAll(`ExtRef[iedName="${iedName}"]`)).filter(extRef => matchExtRefFcda(extRef, fcda) &&
+        matchExtRefCtrlBlockAttr(extRef, controlBlock)));
+}
+/** @returns Action array removing multi FCDA and its subscriber information */
+function removeFCDAs(fCDAs) {
+    const removeFCDAsActions = fCDAs.map(fCDA => ({
+        node: fCDA,
+    }));
+    const extRefActions = [];
+    extRefActions.push(...unsubscribe(fCDAs.flatMap(fCDA => findFcdaSubscription(fCDA))));
+    return removeFCDAsActions.concat(extRefActions);
+}
+/** @returns Action array removing FCDA and its subscriber information */
+function removeFCDA(fCDA) {
+    const removeActionFcda = [{ node: fCDA }];
+    const extRefActions = [];
+    extRefActions.push(...unsubscribe(findFcdaSubscription(fCDA)));
+    return removeActionFcda.concat(extRefActions);
+}
+
+function removeDataSet(dataSet) {
+    const dataSetRemove = [{ node: dataSet }];
+    const ctrlBlockUpdates = controlBlocks(dataSet).map(ctrlBlock => ({
+        element: ctrlBlock,
+        attributes: { datSet: null },
+    }));
+    const removeFCDAsActions = removeFCDAs(Array.from(dataSet.querySelectorAll(':scope > FCDA')));
+    return dataSetRemove.concat(ctrlBlockUpdates, removeFCDAsActions);
+}
 /** @returns Update actions for `DataSet`s attributes and its `datSet` references */
 function updateDateSetName(dataSet, attr) {
     const parent = dataSet.parentElement;
@@ -10626,9 +10903,7 @@ function updateDateSetName(dataSet, attr) {
     const newName = attr.name;
     if (!newName)
         return [dataSetUpdate];
-    const controlBlockUpdates = Array.from(parent.querySelectorAll(`:scope > ReportControl[datSet="${dataSet.getAttribute('name')}"],
-       :scope > GSEControl[datSet="${dataSet.getAttribute('name')}"],
-       :scope > SampledValueControl[datSet="${dataSet.getAttribute('name')}"]`)).map(element => ({
+    const controlBlockUpdates = controlBlocks(dataSet).map(element => ({
         element,
         attributes: { datSet: newName },
     }));
@@ -10700,11 +10975,13 @@ let DataSetElementEditor = class DataSetElementEditor extends s$1 {
                 'daName',
                 'fc',
             ].map(attributeName => { var _a; return (_a = fcda.getAttribute(attributeName)) !== null && _a !== void 0 ? _a : ''; });
-            return y `<mwc-list-item selected twoline value="${identity(fcda)}"
+            return y `<mwc-list-item hasMeta selected twoline value="${identity(fcda)}"
             ><span>${doName}${daName ? `.${daName} [${fc}]` : ` [${fc}]`}</span
             ><span slot="secondary"
               >${`${ldInst}/${prefix}${lnClass}${lnInst}`}</span
-            >
+            ></span>
+            <span slot="meta"><mwc-icon-button icon="delete" @click=${() => this.dispatchEvent(newEditEvent(removeFCDA(fcda)))}></mwc-icon-button>
+            </span>
           </mwc-list-item>`;
         })}</oscd-filtered-list
       >`;
@@ -10759,6 +11036,10 @@ DataSetElementEditor.styles = i$5 `
       overflow: hidden;
       white-space: nowrap;
       text-overflow: ellipsis;
+    }
+
+    mwc-list-item {
+      --mdc-list-item-meta-size: 48px;
     }
 
     *[iconTrailing='search'] {
@@ -13605,11 +13886,21 @@ let ReportControlEditor = class ReportControlEditor extends s$1 {
           </mwc-list-item>
           <li divider role="separator"></li>`;
             const reports = Array.from(ied.querySelectorAll('ReportControl')).map(reportCb => y `<mwc-list-item
+              hasMeta
               twoline
               value="${identity(reportCb)}"
               graphic="icon"
               ><span>${reportCb.getAttribute('name')}</span
               ><span slot="secondary">${identity(reportCb)}</span>
+              <span slot="meta"
+                ><mwc-icon-button
+                  icon="delete"
+                  @click=${() => {
+                this.dispatchEvent(newEditEvent(removeControlBlock(reportCb)));
+                this.requestUpdate();
+            }}
+                ></mwc-icon-button>
+              </span>
               <mwc-icon slot="graphic">${reportIcon}</mwc-icon>
             </mwc-list-item>`);
             return [ieditem, ...reports];
@@ -13645,6 +13936,10 @@ ReportControlEditor.styles = i$5 `
       grid-gap: 12px;
       padding: 8px 12px 16px;
       grid-template-columns: repeat(3, 1fr);
+    }
+
+    mwc-list-item {
+      --mdc-list-item-meta-size: 48px;
     }
 
     data-set-element-editor {
@@ -13941,12 +14236,22 @@ let GseControlEditor = class GseControlEditor extends s$1 {
             <mwc-icon slot="graphic">developer_board</mwc-icon>
           </mwc-list-item>
           <li divider role="separator"></li>`;
-            const gseControls = Array.from(ied.querySelectorAll('GSEControl')).map(reportCb => y `<mwc-list-item
+            const gseControls = Array.from(ied.querySelectorAll('GSEControl')).map(gseControl => y `<mwc-list-item
+              hasMeta
               twoline
-              value="${identity(reportCb)}"
+              value="${identity(gseControl)}"
               graphic="icon"
-              ><span>${reportCb.getAttribute('name')}</span
-              ><span slot="secondary">${identity(reportCb)}</span>
+              ><span>${gseControl.getAttribute('name')}</span
+              ><span slot="secondary">${identity(gseControl)}</span>
+              <span slot="meta"
+                ><mwc-icon-button
+                  icon="delete"
+                  @click=${() => {
+                this.dispatchEvent(newEditEvent(removeControlBlock(gseControl)));
+                this.requestUpdate();
+            }}
+                ></mwc-icon-button>
+              </span>
               <mwc-icon slot="graphic">${gooseIcon}</mwc-icon>
             </mwc-list-item>`);
             return [ieditem, ...gseControls];
@@ -13990,6 +14295,10 @@ GseControlEditor.styles = i$5 `
 
     gse-control-element-editor {
       grid-column: 2 / 4;
+    }
+
+    mwc-list-item {
+      --mdc-list-item-meta-size: 48px;
     }
 
     @media (max-width: 950px) {
@@ -14067,9 +14376,15 @@ let DataSetEditor = class DataSetEditor extends s$1 {
             <mwc-icon slot="graphic">developer_board</mwc-icon>
           </mwc-list-item>
           <li divider role="separator"></li>`;
-            const dataSets = Array.from(ied.querySelectorAll('DataSet')).map(dataSet => y `<mwc-list-item twoline value="${identity(dataSet)}"
+            const dataSets = Array.from(ied.querySelectorAll('DataSet')).map(dataSet => y `<mwc-list-item hasMeta twoline value="${identity(dataSet)}"
               ><span>${dataSet.getAttribute('name')}</span
               ><span slot="secondary">${identity(dataSet)}</span>
+              <span slot="meta"
+                ><mwc-icon-button
+                  icon="delete"
+                  @click=${() => this.dispatchEvent(newEditEvent(removeDataSet(dataSet)))}
+                ></mwc-icon-button>
+              </span>
             </mwc-list-item>`);
             return [ieditem, ...dataSets];
         })}</oscd-filtered-list
@@ -14097,6 +14412,10 @@ DataSetEditor.styles = i$5 `
 
     data-set-element-editor {
       flex: auto;
+    }
+
+    mwc-list-item {
+      --mdc-list-item-meta-size: 48px;
     }
   `;
 __decorate([
@@ -14403,12 +14722,22 @@ let SampledValueControlEditor = class SampledValueControlEditor extends s$1 {
             <mwc-icon slot="graphic">developer_board</mwc-icon>
           </mwc-list-item>
           <li divider role="separator"></li>`;
-            const sampledValueControls = Array.from(ied.querySelectorAll('SampledValueControl')).map(reportCb => y `<mwc-list-item
+            const sampledValueControls = Array.from(ied.querySelectorAll('SampledValueControl')).map(smvControl => y `<mwc-list-item
+              hasMeta
               twoline
-              value="${identity(reportCb)}"
+              value="${identity(smvControl)}"
               graphic="icon"
-              ><span>${reportCb.getAttribute('name')}</span
-              ><span slot="secondary">${identity(reportCb)}</span>
+              ><span>${smvControl.getAttribute('name')}</span
+              ><span slot="secondary">${identity(smvControl)}</span>
+              <span slot="meta"
+                ><mwc-icon-button
+                  icon="delete"
+                  @click=${() => {
+                this.dispatchEvent(newEditEvent(removeControlBlock(smvControl)));
+                this.requestUpdate();
+            }}
+                ></mwc-icon-button>
+              </span>
               <mwc-icon slot="graphic">${smvIcon}</mwc-icon>
             </mwc-list-item>`);
             return [ieditem, ...sampledValueControls];
@@ -14444,6 +14773,10 @@ SampledValueControlEditor.styles = i$5 `
       grid-gap: 12px;
       padding: 8px 12px 16px;
       grid-template-columns: repeat(3, 1fr);
+    }
+
+    mwc-list-item {
+      --mdc-list-item-meta-size: 48px;
     }
 
     data-set-element-editor {
