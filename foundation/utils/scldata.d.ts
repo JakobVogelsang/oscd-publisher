@@ -5,4 +5,5 @@ export declare const relatives: Record<SCLTag, {
     parents: SCLTag[];
     children: SCLTag[];
 }>;
+export declare function getReference(parent: Element, tag: SCLTag): Element | null;
 export {};

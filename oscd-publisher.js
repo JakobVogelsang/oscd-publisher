@@ -9547,6 +9547,27 @@ const relatives = {
         children: [...tEquipmentContainerSequence, 'Voltage', 'Bay', 'Function'],
     },
 };
+function getReference(parent, tag) {
+    var _a, _b, _c;
+    const parentTag = parent.tagName;
+    const children = Array.from(parent.children);
+    if (parentTag === 'Services' ||
+        parentTag === 'SettingGroups' ||
+        !isSCLTag(parentTag))
+        return (_a = children.find(child => child.tagName === tag)) !== null && _a !== void 0 ? _a : null;
+    const sequence = (_c = (_b = relatives[parentTag]) === null || _b === void 0 ? void 0 : _b.children) !== null && _c !== void 0 ? _c : [];
+    let index = sequence.findIndex(element => element === tag);
+    if (index < 0)
+        return null;
+    let nextSibling;
+    while (index < sequence.length && !nextSibling) {
+        // eslint-disable-next-line no-loop-func
+        nextSibling = children.find(child => child.tagName === sequence[index]);
+        // eslint-disable-next-line no-plusplus
+        index++;
+    }
+    return nextSibling !== null && nextSibling !== void 0 ? nextSibling : null;
+}
 
 const voidSelector = ':not(*)';
 function selector(tagName, identity) {
@@ -13975,7 +13996,134 @@ ReportControlEditor = __decorate([
     e$7('report-control-editor')
 ], ReportControlEditor);
 
+const gSEselectors = {
+    MinTime: ':scope > MinTime',
+    MaxTime: ':scope > MaxTime',
+    'MAC-Address': ':scope > Address > P[type="MAC-Address"]',
+    APPID: ':scope > Address > P[type="APPID"]',
+    'VLAN-ID': ':scope > Address > P[type="VLAN-ID"]',
+    'VLAN-PRIORITY': ':scope > Address > P[type="VLAN-PRIORITY"]',
+};
+/** @returns Whether the `gSE`s element attributes or instType has changed */
+function checkGSEDiff(gSE, attrs, instType) {
+    return Object.entries(attrs).some(([key, value]) => {
+        var _a, _b, _c;
+        const oldValue = (_b = (_a = gSE.querySelector(gSEselectors[key])) === null || _a === void 0 ? void 0 : _a.textContent) !== null && _b !== void 0 ? _b : null;
+        if (instType === undefined)
+            return oldValue !== value;
+        const oldInstType = key === 'MinTime' || key === 'MaxTime'
+            ? undefined
+            : (_c = gSE.querySelector(gSEselectors[key])) === null || _c === void 0 ? void 0 : _c.hasAttribute('xsi:type');
+        if (oldInstType === undefined)
+            return oldValue !== value;
+        return oldValue !== value || instType !== oldInstType;
+    });
+}
+function checkTimeMinMaxTimeDiff(gSE, attrs) {
+    const timeAttrs = {};
+    timeAttrs.MinTime = attrs.MinTime;
+    timeAttrs.MaxTime = attrs.MaxTime;
+    return checkGSEDiff(gSE, timeAttrs);
+}
+function checkTimeAddressDiff(gSE, attrs, instType) {
+    const timeAttrs = {};
+    timeAttrs['MAC-Address'] = attrs['MAC-Address'];
+    timeAttrs.APPID = attrs.APPID;
+    timeAttrs['VLAN-ID'] = attrs['VLAN-ID'];
+    timeAttrs['VLAN-PRIORITY'] = attrs['VLAN-PRIORITY'];
+    return checkGSEDiff(gSE, timeAttrs, instType);
+}
+/** @returns a new [[`tag`]] element owned by [[`doc`]]. */
+function createElement(doc, tag, attrs) {
+    const element = doc.createElementNS(doc.documentElement.namespaceURI, tag);
+    Object.entries(attrs)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        .filter(([_, value]) => value !== null)
+        .forEach(([name, value]) => element.setAttribute(name, value));
+    return element;
+}
+function updateGseTimes(gSE, attr) {
+    const actions = [];
+    if (attr.MinTime !== undefined) {
+        if (attr.MinTime !== null) {
+            const newMinTime = createElement(gSE.ownerDocument, 'MinTime', {
+                unit: 's',
+                multiplier: 'm',
+            });
+            newMinTime.textContent = attr.MinTime;
+            actions.push({
+                parent: gSE,
+                node: newMinTime,
+                reference: getReference(gSE, 'MinTime'),
+            });
+        }
+        const oldMinTime = gSE.querySelector('MinTime');
+        if (oldMinTime)
+            actions.push({ node: oldMinTime });
+    }
+    if (attr.MaxTime !== undefined) {
+        if (attr.MaxTime !== null) {
+            const newMaxTime = createElement(gSE.ownerDocument, 'MaxTime', {
+                unit: 's',
+                multiplier: 'm',
+            });
+            newMaxTime.textContent = attr.MaxTime;
+            actions.push({
+                parent: gSE,
+                node: newMaxTime,
+                reference: getReference(gSE, 'MaxTime'),
+            });
+        }
+        const oldMaxTime = gSE.querySelector('MaxTime');
+        if (oldMaxTime)
+            actions.push({ node: oldMaxTime });
+    }
+    return actions;
+}
+function updateGseAddress(gSE, attrs, instType) {
+    const actions = [];
+    const newAddress = createElement(gSE.ownerDocument, 'Address', {});
+    Object.entries(attrs)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        .filter(([_, value]) => value !== null)
+        .forEach(([type, value]) => {
+        const child = createElement(gSE.ownerDocument, 'P', { type });
+        if (instType)
+            child.setAttributeNS('http://www.w3.org/2001/XMLSchema-instance', 'xsi:type', `tP_${type}`);
+        child.textContent = value;
+        newAddress.appendChild(child);
+    });
+    actions.push({
+        parent: gSE,
+        node: newAddress,
+        reference: getReference(gSE, 'Address'),
+    });
+    const oldAddress = gSE.querySelector('Address');
+    if (oldAddress)
+        actions.push({ node: oldAddress });
+    return actions;
+}
+/**
+ * @param gSE - the element to be updated
+ * @param attrs - input values containing potential changes
+ * @param instType - Whether xsi:type attributes shall be set
+ * @returns Action array updating GSEs children Address, MinTine and MaxTime
+ * */
+function updateGSE(gSE, attrs, instType) {
+    const addressActions = checkTimeAddressDiff(gSE, attrs, instType)
+        ? updateGseAddress(gSE, attrs, instType)
+        : [];
+    const timeActions = checkTimeMinMaxTimeDiff(gSE, attrs)
+        ? updateGseTimes(gSE, attrs)
+        : [];
+    return addressActions.concat(timeActions);
+}
+
 let GseControlElementEditor = class GseControlElementEditor extends s$1 {
+    constructor() {
+        super(...arguments);
+        this.gSEdiff = false;
+    }
     get gSE() {
         var _a, _b, _c;
         const cbName = this.element.getAttribute('name');
@@ -13985,6 +14133,27 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
         return this.element.ownerDocument.querySelector(`:root > Communication > SubNetwork > ` +
             `ConnectedAP[iedName="${iedName}"][apName="${apName}"] > ` +
             `GSE[ldInst="${ldInst}"][cbName="${cbName}"]`);
+    }
+    onGSEInputChange() {
+        var _a, _b, _c;
+        if (Array.from((_a = this.inputs) !== null && _a !== void 0 ? _a : []).some(input => !input.checkValidity())) {
+            this.gSEdiff = false;
+            return;
+        }
+        const gSEAttrs = {};
+        for (const input of (_b = this.inputs) !== null && _b !== void 0 ? _b : [])
+            gSEAttrs[input.label] = input.maybeValue;
+        this.gSEdiff = checkGSEDiff(this.gSE, gSEAttrs, (_c = this.instType) === null || _c === void 0 ? void 0 : _c.checked);
+    }
+    saveGSEChanges() {
+        var _a, _b;
+        if (!this.gSE)
+            return;
+        const gSEAttrs = {};
+        for (const input of (_a = this.inputs) !== null && _a !== void 0 ? _a : [])
+            gSEAttrs[input.label] = input.maybeValue;
+        this.dispatchEvent(newEditEvent(updateGSE(this.gSE, gSEAttrs, (_b = this.instType) === null || _b === void 0 ? void 0 : _b.checked)));
+        this.onGSEInputChange();
     }
     renderGseContent() {
         var _a, _b, _c, _d;
@@ -14006,28 +14175,28 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
                 attributes[key] =
                     (_b = (_a = gSE.querySelector(`Address > P[type="${key}"]`)) === null || _a === void 0 ? void 0 : _a.innerHTML.trim()) !== null && _b !== void 0 ? _b : null;
         });
-        return y `<div class="content">
+        return y `<div class="content gse">
       <h3>Communication Settings (GSE)</h3>
       <mwc-formfield label="connectedap.wizard.addschemainsttype"
         ><mwc-checkbox
           id="instType"
           ?checked="${hasInstType}"
-          disabled
+          @change=${this.onGSEInputChange}
         ></mwc-checkbox></mwc-formfield
       >${Object.entries(attributes).map(([key, value]) => y `<oscd-textfield
             label="${key}"
-            ?nullable=${typeNullable[key]}
             .maybeValue=${value}
             pattern="${typePattern[key]}"
             required
-            disabled
+            @input=${this.onGSEInputChange}
+            ?nullable=${typeNullable[key]}
           ></oscd-textfield>`)}<oscd-textfield
         label="MinTime"
         .maybeValue=${minTime}
         nullable
         suffix="ms"
         type="number"
-        disabled
+        @input=${this.onGSEInputChange}
       ></oscd-textfield
       ><oscd-textfield
         label="MaxTime"
@@ -14035,8 +14204,15 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
         nullable
         suffix="ms"
         type="number"
-        disabled
+        @input=${this.onGSEInputChange}
       ></oscd-textfield>
+      <mwc-button
+        class="save"
+        label="save"
+        icon="save"
+        ?disabled=${!this.gSEdiff}
+        @click=${() => this.saveGSEChanges()}
+      ></mwc-button>
     </div>`;
     }
     renderGseControlContent() {
@@ -14127,12 +14303,18 @@ GseControlElementEditor.styles = i$5 `
     }
 
     .content {
+      display: flex;
+      flex-direction: column;
       border-left: thick solid var(--mdc-theme-on-primary);
     }
 
     .content > * {
       display: block;
       margin: 4px 8px 16px;
+    }
+
+    .save {
+      align-self: flex-end;
     }
 
     h2,
@@ -14171,6 +14353,15 @@ __decorate([
 __decorate([
     e$6({ attribute: false })
 ], GseControlElementEditor.prototype, "gSE", null);
+__decorate([
+    t$1()
+], GseControlElementEditor.prototype, "gSEdiff", void 0);
+__decorate([
+    e$4('.content.gse > oscd-textfield')
+], GseControlElementEditor.prototype, "inputs", void 0);
+__decorate([
+    i$2('#instType')
+], GseControlElementEditor.prototype, "instType", void 0);
 GseControlElementEditor = __decorate([
     e$7('gse-control-element-editor')
 ], GseControlElementEditor);
