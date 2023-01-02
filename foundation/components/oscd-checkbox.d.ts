@@ -28,6 +28,7 @@ export declare class OscdCheckbox extends LitElement {
     get formfieldLabel(): string;
     nullSwitch?: Switch;
     checkbox?: Checkbox;
+    checkValidity(): boolean;
     private nulled;
     private enable;
     private disable;

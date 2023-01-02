@@ -8682,7 +8682,7 @@ let OscdTextfield = class OscdTextfield extends TextField {
         if (this.nullable) {
             return y `<mwc-switch
         style="margin-left: 12px;"
-        ?checked=${!this.null}
+        ?selected=${!this.null}
         ?disabled=${this.disabledSwitch}
         @click=${() => {
                 this.null = !this.nullSwitch.selected;
@@ -10809,6 +10809,7 @@ function matchExtRefCtrlBlockAttr(extRef, ctrlBlock) {
         extRef.getAttribute('serviceType') === serviceType[ctrlBlock.tagName]);
 }
 
+/** @returns all ExtRef element subscribed to a controlBlock */
 function findCtrlBlockSubscription(ctrlBlock) {
     const doc = ctrlBlock.ownerDocument;
     const iedName = ctrlBlock.closest('IED').getAttribute('name');
@@ -11403,6 +11404,10 @@ let OscdCheckbox = class OscdCheckbox extends s$1 {
     get formfieldLabel() {
         return this.helper ? `${this.helper} (${this.label})` : this.label;
     }
+    // eslint-disable-next-line class-methods-use-this
+    checkValidity() {
+        return true;
+    }
     enable() {
         if (this.nulled === null)
             return;
@@ -11424,10 +11429,11 @@ let OscdCheckbox = class OscdCheckbox extends s$1 {
         if (this.nullable) {
             return y `<mwc-switch
         style="margin-left: 12px;"
-        ?checked=${!this.null}
+        ?selected=${!this.null}
         ?disabled=${this.disabled}
-        @change=${() => {
+        @click=${() => {
                 this.null = !this.nullSwitch.selected;
+                this.dispatchEvent(new Event('input'));
             }}
       ></mwc-switch>`;
         }
@@ -11445,6 +11451,7 @@ let OscdCheckbox = class OscdCheckbox extends s$1 {
             ><mwc-checkbox
               ?checked=${this.initChecked}
               ?disabled=${this.deactivateCheckbox || this.disabled}
+              @change=${() => this.dispatchEvent(new Event('input'))}
             ></mwc-checkbox
           ></mwc-formfield>
         </div>
@@ -13154,10 +13161,11 @@ let OscdSelect = class OscdSelect extends Select {
         if (this.nullable) {
             return y `<mwc-switch
         style="margin-left: 12px;"
-        ?checked=${!this.null}
+        ?selected=${!this.null}
         ?disabled=${this.disabledSwitch}
-        @change=${() => {
+        @click=${() => {
                 this.null = !this.nullSwitch.selected;
+                this.dispatchEvent(new Event('selected'));
             }}
       ></mwc-switch>`;
         }
@@ -14004,6 +14012,18 @@ const gSEselectors = {
     'VLAN-ID': ':scope > Address > P[type="VLAN-ID"]',
     'VLAN-PRIORITY': ':scope > Address > P[type="VLAN-PRIORITY"]',
 };
+/** @returns a `GSE` element referenced to `GSEControl` element or `null` */
+function referencedGSE(gseControl) {
+    var _a, _b, _c;
+    const iedName = (_a = gseControl.closest('IED')) === null || _a === void 0 ? void 0 : _a.getAttribute('name');
+    const apName = (_b = gseControl.closest('AccessPoint')) === null || _b === void 0 ? void 0 : _b.getAttribute('name');
+    const ldInst = (_c = gseControl.closest('LDevice')) === null || _c === void 0 ? void 0 : _c.getAttribute('inst');
+    const cbName = gseControl.getAttribute('name');
+    return gseControl.ownerDocument.querySelector(`Communication 
+      > SubNetwork
+      > ConnectedAP[iedName="${iedName}"][apName="${apName}"] 
+      > GSE[ldInst="${ldInst}"][cbName="${cbName}"]`);
+}
 /** @returns Whether the `gSE`s element attributes or instType has changed */
 function checkGSEDiff(gSE, attrs, instType) {
     return Object.entries(attrs).some(([key, value]) => {
@@ -14119,10 +14139,40 @@ function updateGSE(gSE, attrs, instType) {
     return addressActions.concat(timeActions);
 }
 
+/** @returns action array to update all `GSEControl` attributes */
+function updateGseControl(gseControl, attrs) {
+    const ctrlBlockUpdates = [
+        { element: gseControl, attributes: attrs },
+    ];
+    if (!attrs.name)
+        return ctrlBlockUpdates;
+    const extRefUpdates = findCtrlBlockSubscription(gseControl).map(extRef => ({
+        element: extRef,
+        attributes: { srcCBName: attrs.name },
+    }));
+    const objRefUpdates = Array.from(gseControl.ownerDocument.querySelectorAll('Val'))
+        .filter(val => val.textContent === controlBlockObjectReference(gseControl))
+        .flatMap(val => {
+        const [path] = controlBlockObjectReference(gseControl).split('.');
+        const newVal = gseControl.ownerDocument.createTextNode(`${path}.${attrs.name}`);
+        return [
+            { node: val.firstChild },
+            { parent: val, node: newVal, reference: null },
+        ];
+    });
+    const updateGseAction = [];
+    const gSE = referencedGSE(gseControl);
+    if (gSE) {
+        updateGseAction.push({ element: gSE, attributes: { cbName: attrs.name } });
+    }
+    return ctrlBlockUpdates.concat(extRefUpdates, objRefUpdates, updateGseAction);
+}
+
 let GseControlElementEditor = class GseControlElementEditor extends s$1 {
     constructor() {
         super(...arguments);
         this.gSEdiff = false;
+        this.gSEControlDiff = false;
     }
     get gSE() {
         var _a, _b, _c;
@@ -14134,14 +14184,36 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
             `ConnectedAP[iedName="${iedName}"][apName="${apName}"] > ` +
             `GSE[ldInst="${ldInst}"][cbName="${cbName}"]`);
     }
+    onGSEControlInputChange() {
+        var _a, _b, _c;
+        if (Array.from((_a = this.gSEControlInputs) !== null && _a !== void 0 ? _a : []).some(input => !input.checkValidity())) {
+            this.gSEControlDiff = false;
+            return;
+        }
+        const gSEControlAttrs = {};
+        for (const input of (_b = this.gSEControlInputs) !== null && _b !== void 0 ? _b : [])
+            gSEControlAttrs[input.label] = input.maybeValue;
+        this.gSEControlDiff = Array.from((_c = this.gSEControlInputs) !== null && _c !== void 0 ? _c : []).some(input => { var _a; return ((_a = this.element) === null || _a === void 0 ? void 0 : _a.getAttribute(input.label)) !== input.maybeValue; });
+    }
+    saveGSEControlChanges() {
+        var _a, _b;
+        if (!this.element)
+            return;
+        const gSEControlAttrs = {};
+        for (const input of (_a = this.gSEControlInputs) !== null && _a !== void 0 ? _a : [])
+            if (((_b = this.element) === null || _b === void 0 ? void 0 : _b.getAttribute(input.label)) !== input.maybeValue)
+                gSEControlAttrs[input.label] = input.maybeValue;
+        this.dispatchEvent(newEditEvent(updateGseControl(this.element, gSEControlAttrs)));
+        this.onGSEControlInputChange();
+    }
     onGSEInputChange() {
         var _a, _b, _c;
-        if (Array.from((_a = this.inputs) !== null && _a !== void 0 ? _a : []).some(input => !input.checkValidity())) {
+        if (Array.from((_a = this.gSEInputs) !== null && _a !== void 0 ? _a : []).some(input => !input.checkValidity())) {
             this.gSEdiff = false;
             return;
         }
         const gSEAttrs = {};
-        for (const input of (_b = this.inputs) !== null && _b !== void 0 ? _b : [])
+        for (const input of (_b = this.gSEInputs) !== null && _b !== void 0 ? _b : [])
             gSEAttrs[input.label] = input.maybeValue;
         this.gSEdiff = checkGSEDiff(this.gSE, gSEAttrs, (_c = this.instType) === null || _c === void 0 ? void 0 : _c.checked);
     }
@@ -14150,7 +14222,7 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
         if (!this.gSE)
             return;
         const gSEAttrs = {};
-        for (const input of (_a = this.inputs) !== null && _a !== void 0 ? _a : [])
+        for (const input of (_a = this.gSEInputs) !== null && _a !== void 0 ? _a : [])
             gSEAttrs[input.label] = input.maybeValue;
         this.dispatchEvent(newEditEvent(updateGSE(this.gSE, gSEAttrs, (_b = this.instType) === null || _b === void 0 ? void 0 : _b.checked)));
         this.onGSEInputChange();
@@ -14216,6 +14288,7 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
     </div>`;
     }
     renderGseControlContent() {
+        var _a, _b;
         const [name, desc, type, appID, fixedOffs, securityEnabled] = [
             'name',
             'desc',
@@ -14224,7 +14297,10 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
             'fixedOffs',
             'securityEnabled',
         ].map(attr => { var _a; return (_a = this.element) === null || _a === void 0 ? void 0 : _a.getAttribute(attr); });
-        return y `<div class="content">
+        const reservedGseControlNames = Array.from((_b = (_a = this.element.parentElement) === null || _a === void 0 ? void 0 : _a.querySelectorAll('GSEControl')) !== null && _b !== void 0 ? _b : [])
+            .map(gseControl => gseControl.getAttribute('name'))
+            .filter(gseControlName => gseControlName !== this.element.getAttribute('name'));
+        return y `<div class="content gsecontrol">
       <oscd-textfield
         label="name"
         .maybeValue=${name}
@@ -14233,15 +14309,16 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
         validationMessage="textfield.required"
         pattern="${patterns.asciName}"
         maxLength="${maxLength.cbName}"
+        .reservedValues=${reservedGseControlNames}
         dialogInitialFocus
-        disabled
+        @input=${this.onGSEControlInputChange}
       ></oscd-textfield>
       <oscd-textfield
         label="desc"
         .maybeValue=${desc}
         nullable
         helper="scl.desc"
-        disabled
+        @input=${this.onGSEControlInputChange}
       ></oscd-textfield>
       <oscd-select
         label="type"
@@ -14249,7 +14326,7 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
         helper="scl.type"
         nullable
         required
-        disabled
+        @selected=${this.onGSEControlInputChange}
         >${['GOOSE', 'GSSE'].map(gseControlType => y `<mwc-list-item value="${gseControlType}"
               >${gseControlType}</mwc-list-item
             >`)}</oscd-select
@@ -14260,14 +14337,14 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
         helper="scl.id"
         required
         validationMessage="textfield.nonempty"
-        disabled
+        @input=${this.onGSEControlInputChange}
       ></oscd-textfield>
       <oscd-checkbox
         label="fixedOffs"
         .maybeValue=${fixedOffs}
         nullable
         helper="scl.fixedOffs"
-        disabled
+        @input=${this.onGSEControlInputChange}
       ></oscd-checkbox>
       <oscd-select
         label="securityEnabled"
@@ -14275,11 +14352,18 @@ let GseControlElementEditor = class GseControlElementEditor extends s$1 {
         nullable
         required
         helper="scl.securityEnable"
-        disabled
+        @selected=${this.onGSEControlInputChange}
         >${['None', 'Signature', 'SignatureAndEncryption'].map(securityType => y `<mwc-list-item value="${securityType}"
               >${securityType}</mwc-list-item
             >`)}</oscd-select
       >
+      <mwc-button
+        class="save"
+        label="save"
+        icon="save"
+        ?disabled=${!this.gSEControlDiff}
+        @click=${() => this.saveGSEControlChanges()}
+      ></mwc-button>
     </div>`;
     }
     render() {
@@ -14357,8 +14441,14 @@ __decorate([
     t$1()
 ], GseControlElementEditor.prototype, "gSEdiff", void 0);
 __decorate([
+    t$1()
+], GseControlElementEditor.prototype, "gSEControlDiff", void 0);
+__decorate([
     e$4('.content.gse > oscd-textfield')
-], GseControlElementEditor.prototype, "inputs", void 0);
+], GseControlElementEditor.prototype, "gSEInputs", void 0);
+__decorate([
+    e$4('.content.gsecontrol > oscd-textfield, .content.gsecontrol > oscd-select, .content.gsecontrol > oscd-checkbox')
+], GseControlElementEditor.prototype, "gSEControlInputs", void 0);
 __decorate([
     i$2('#instType')
 ], GseControlElementEditor.prototype, "instType", void 0);
