@@ -1,7 +1,11 @@
 import { LitElement, TemplateResult } from 'lit';
 import '@material/mwc-button';
+import '@material/mwc-dialog';
 import '@material/mwc-list/mwc-list-item';
+import '@material/mwc-list/mwc-radio-list-item';
+import '@material/mwc-select';
 import type { Button } from '@material/mwc-button';
+import type { Dialog } from '@material/mwc-dialog';
 import './data-set-element-editor.js';
 import './gse-control-element-editor.js';
 import '../foundation/components/oscd-filtered-list.js';
@@ -13,9 +17,12 @@ export declare class GseControlEditor extends LitElement {
     selectedDataSet?: Element | null;
     selectionList: OscdFilteredList;
     selectGSEControlButton: Button;
+    selectDataSetDialog: Dialog;
     /** Resets selected GOOSE and its DataSet, if not existing in new doc */
     update(props: Map<string | number | symbol, unknown>): void;
+    private selectDataSet;
     private selectGSEControl;
+    private renderSelectDataSetDialog;
     private renderElementEditorContainer;
     renderSelectionList(): TemplateResult;
     private renderToggleButton;
