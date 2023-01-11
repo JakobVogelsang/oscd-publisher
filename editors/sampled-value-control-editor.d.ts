@@ -1,7 +1,6 @@
 import { LitElement, TemplateResult } from 'lit';
 import '@material/mwc-button';
 import '@material/mwc-list/mwc-list-item';
-import '@material/mwc-list/mwc-radio-list-item.js';
 import type { Button } from '@material/mwc-button';
 import type { Dialog } from '@material/mwc-dialog';
 import './data-set-element-editor.js';
