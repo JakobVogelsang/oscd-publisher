@@ -1,5 +1,6 @@
 import { LitElement, TemplateResult } from 'lit';
 import '@material/mwc-button';
+import '@material/mwc-icon-button';
 import '@material/mwc-list/mwc-list-item';
 import type { Button } from '@material/mwc-button';
 import './data-set-element-editor.js';

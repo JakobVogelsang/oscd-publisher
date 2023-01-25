@@ -13800,7 +13800,7 @@ function removeControlBlock(ctrlBlock) {
     return ctrlBlockRemoveAction.concat(removeDataSet(dataSet));
 }
 
-function createElement$1(doc, tag, attrs) {
+function createElement$2(doc, tag, attrs) {
     const element = doc.createElementNS(doc.documentElement.namespaceURI, tag);
     Object.entries(attrs)
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -13900,7 +13900,7 @@ function addFCDAs(dataSet, paths) {
             continue;
         actions.push({
             parent: dataSet,
-            node: createElement$1(dataSet.ownerDocument, 'FCDA', fcdaAttrs),
+            node: createElement$2(dataSet.ownerDocument, 'FCDA', fcdaAttrs),
             reference: null,
         });
     }
@@ -13948,13 +13948,21 @@ function addFCDOs(dataSet, fcPaths) {
             continue;
         actions.push({
             parent: dataSet,
-            node: createElement$1(dataSet.ownerDocument, 'FCDA', fcdaAttrs),
+            node: createElement$2(dataSet.ownerDocument, 'FCDA', fcdaAttrs),
             reference: null,
         });
     }
     return actions;
 }
 
+function createElement$1(doc, tag, attrs) {
+    const element = doc.createElementNS(doc.documentElement.namespaceURI, tag);
+    Object.entries(attrs)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        .filter(([_, value]) => value !== null)
+        .forEach(([name, value]) => element.setAttribute(name, value));
+    return element;
+}
 function removeDataSet(dataSet) {
     const dataSetRemove = [{ node: dataSet }];
     const ctrlBlockUpdates = controlBlocks(dataSet).map(ctrlBlock => ({
@@ -13981,6 +13989,39 @@ function updateDateSetName(dataSet, attr) {
         attributes: { datSet: newName },
     }));
     return [dataSetUpdate].concat(controlBlockUpdates);
+}
+function uniqueDataSetName(anyLn) {
+    const nameCore = 'newDataSet';
+    const siblingNames = Array.from(anyLn.querySelectorAll('DataSet')).map(child => { var _a; return (_a = child.getAttribute('name')) !== null && _a !== void 0 ? _a : child.tagName; });
+    if (!siblingNames.length)
+        return `${nameCore}_001`;
+    let newName = '';
+    // eslint-disable-next-line no-plusplus
+    let i = 1;
+    newName = `${nameCore}_${i.toString().padStart(3, '0')}`;
+    while (i < siblingNames.length + 1) {
+        if (!siblingNames.includes(newName))
+            break;
+        i += 1;
+        newName = `${nameCore}_${i.toString().padStart(3, '0')}`;
+    }
+    return newName;
+}
+/** @returns Action inserting new `DataSet` to [[`parent`]] element */
+function addDataSet(parent) {
+    const anyLn = parent.tagName === 'LN' || parent.tagName === 'LN0'
+        ? parent
+        : parent.querySelector('LN0, LN');
+    if (!anyLn)
+        return null;
+    const dataSet = createElement$1(anyLn.ownerDocument, 'DataSet', {
+        name: uniqueDataSetName(anyLn),
+    });
+    return {
+        parent: anyLn,
+        node: dataSet,
+        reference: getReference(anyLn, 'DataSet'),
+    };
 }
 
 function getDisplayString(entry) {
@@ -17481,6 +17522,7 @@ let DataSetEditor = class DataSetEditor extends s$3 {
       class="selectionlist"
       >${Array.from(this.doc.querySelectorAll('IED')).flatMap(ied => {
             const ieditem = y `<mwc-list-item
+            hasMeta
             class="listitem header"
             noninteractive
             graphic="icon"
@@ -17493,6 +17535,16 @@ let DataSetEditor = class DataSetEditor extends s$3 {
           >
             <span>${ied.getAttribute('name')}</span>
             <mwc-icon slot="graphic">developer_board</mwc-icon>
+            <mwc-icon-button
+              slot="meta"
+              icon="playlist_add"
+              @click=${() => {
+                const insertDataSet = addDataSet(ied);
+                if (insertDataSet)
+                    this.dispatchEvent(newEditEvent(insertDataSet));
+                this.requestUpdate();
+            }}
+            ></mwc-icon-button>
           </mwc-list-item>
           <li divider role="separator"></li>`;
             const dataSets = Array.from(ied.querySelectorAll('DataSet')).map(dataSet => y `<mwc-list-item hasMeta twoline value="${identity(dataSet)}"
@@ -17501,7 +17553,10 @@ let DataSetEditor = class DataSetEditor extends s$3 {
               <span slot="meta"
                 ><mwc-icon-button
                   icon="delete"
-                  @click=${() => this.dispatchEvent(newEditEvent(removeDataSet(dataSet)))}
+                  @click=${() => {
+                this.dispatchEvent(newEditEvent(removeDataSet(dataSet)));
+                this.requestUpdate();
+            }}
                 ></mwc-icon-button>
               </span>
             </mwc-list-item>`);
@@ -17531,6 +17586,10 @@ DataSetEditor.styles = i$6 `
 
     data-set-element-editor {
       flex: auto;
+    }
+
+    mwc-icon-button[icon='playlist_add'] {
+      pointer-events: all;
     }
 
     mwc-list-item {
