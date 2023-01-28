@@ -13800,7 +13800,7 @@ function removeControlBlock(ctrlBlock) {
     return ctrlBlockRemoveAction.concat(removeDataSet(dataSet));
 }
 
-function createElement$2(doc, tag, attrs) {
+function createElement$3(doc, tag, attrs) {
     const element = doc.createElementNS(doc.documentElement.namespaceURI, tag);
     Object.entries(attrs)
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -13900,7 +13900,7 @@ function addFCDAs(dataSet, paths) {
             continue;
         actions.push({
             parent: dataSet,
-            node: createElement$2(dataSet.ownerDocument, 'FCDA', fcdaAttrs),
+            node: createElement$3(dataSet.ownerDocument, 'FCDA', fcdaAttrs),
             reference: null,
         });
     }
@@ -13948,14 +13948,14 @@ function addFCDOs(dataSet, fcPaths) {
             continue;
         actions.push({
             parent: dataSet,
-            node: createElement$2(dataSet.ownerDocument, 'FCDA', fcdaAttrs),
+            node: createElement$3(dataSet.ownerDocument, 'FCDA', fcdaAttrs),
             reference: null,
         });
     }
     return actions;
 }
 
-function createElement$1(doc, tag, attrs) {
+function createElement$2(doc, tag, attrs) {
     const element = doc.createElementNS(doc.documentElement.namespaceURI, tag);
     Object.entries(attrs)
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -14007,16 +14007,21 @@ function uniqueDataSetName(anyLn) {
     }
     return newName;
 }
-/** @returns Action inserting new `DataSet` to [[`parent`]] element */
-function addDataSet(parent) {
+/**
+ * @parent Parent element such as `LN0`, `LN`, `LDevice`, `AccessPoint` and `IED`
+ * @attributes DataSet element attributes. Required but missing attributes
+ *             will be added automatically.
+ ** @returns Action inserting new `DataSet` to [[`parent`]] element */
+function addDataSet(parent, attributes = {}) {
     const anyLn = parent.tagName === 'LN' || parent.tagName === 'LN0'
         ? parent
         : parent.querySelector('LN0, LN');
     if (!anyLn)
         return null;
-    const dataSet = createElement$1(anyLn.ownerDocument, 'DataSet', {
-        name: uniqueDataSetName(anyLn),
-    });
+    // eslint-disable-next-line no-param-reassign
+    if (!attributes.name)
+        attributes.name = uniqueDataSetName(anyLn);
+    const dataSet = createElement$2(anyLn.ownerDocument, 'DataSet', attributes);
     return {
         parent: anyLn,
         node: dataSet,
@@ -14251,6 +14256,7 @@ let DataSetElementEditor = class DataSetElementEditor extends s$3 {
         ?disabled=${!this.someInputDiff}
         @click=${() => this.saveChanges()}
       ></mwc-button>
+      <hr color="lightgrey" />
       <div style="display: flex; flex-direction:row;align-self: center;">
         ${this.renderDataAttributePicker()} ${this.renderDataObjectPicker()}
       </div>
@@ -16695,7 +16701,7 @@ let ReportControlEditor = class ReportControlEditor extends s$3 {
           >
             <mwc-icon-button
               slot="change"
-              icon="change_circle"
+              icon="swap_vert"
               ?disabled=${!!findCtrlBlockSubscription(this.selectedReportControl).length}
               @click=${() => this.selectDataSetDialog.show()}
             ></mwc-icon-button
@@ -16827,6 +16833,75 @@ ReportControlEditor = __decorate([
     e$7('report-control-editor')
 ], ReportControlEditor);
 
+const maxGseMacAddress = 0x010ccd0101ff;
+const minGseMacAddress = 0x010ccd010000;
+const maxSmvMacAddress = 0x010ccd0401ff;
+const minSmvMacAddress = 0x010ccd040000;
+function convertToMac(mac) {
+    const str = 0 + mac.toString(16).toUpperCase();
+    const arr = str.match(/.{1,2}/g);
+    return arr.join('-');
+}
+const gseMacRange = Array(maxGseMacAddress - minGseMacAddress)
+    .fill(1)
+    .map((_, i) => convertToMac(minGseMacAddress + i));
+const smvMacRange = Array(maxSmvMacAddress - minSmvMacAddress)
+    .fill(1)
+    .map((_, i) => convertToMac(minSmvMacAddress + i));
+/**
+ * @param doc - project xml document
+ * @param serviceType - SampledValueControl (SMV) or GSEControl (GSE)
+ * @returns a function generating increasing unused `MAC-Address` within `doc` on subsequent invocations
+ */
+function mACAddressGenerator(doc, serviceType) {
+    const macs = new Set(Array.from(doc.querySelectorAll(`${serviceType} > Address > P[type="MAC-Address"]`)).map(mac => mac.textContent));
+    const range = serviceType === 'SMV' ? smvMacRange : gseMacRange;
+    return () => {
+        const uniqueMAC = range.find(mac => !macs.has(mac));
+        if (uniqueMAC)
+            macs.add(uniqueMAC);
+        return uniqueMAC !== null && uniqueMAC !== void 0 ? uniqueMAC : null;
+    };
+}
+const maxGseAppId = 0x3fff;
+const minGseAppId = 0x0000;
+// APPID range for Type1A(Trip) GOOSE acc. IEC 61850-8-1
+const maxGseTripAppId = 0xbfff;
+const minGseTripAppId = 0x8000;
+const maxSmvAppId = 0x7fff;
+const minSmvAppId = 0x4000;
+const gseAppIdRange = Array(maxGseAppId - minGseAppId)
+    .fill(1)
+    .map((_, i) => (minGseAppId + i).toString(16).toUpperCase().padStart(4, '0'));
+const gseTripAppIdRange = Array(maxGseTripAppId - minGseTripAppId)
+    .fill(1)
+    .map((_, i) => (minGseTripAppId + i).toString(16).toUpperCase().padStart(4, '0'));
+const smvAppIdRange = Array(maxSmvAppId - minSmvAppId)
+    .fill(1)
+    .map((_, i) => (minSmvAppId + i).toString(16).toUpperCase().padStart(4, '0'));
+/**
+ * @param doc - project xml document
+ * @param serviceType - SampledValueControl (SMV) or GSEControl (GSE)
+ * @param type1A - whether the GOOSE is a Trip GOOSE resulting in different APPID range - default false
+ * @returns a function generating increasing unused `APPID` within `doc` on subsequent invocations
+ */
+function appIdGenerator(doc, serviceType, type1A = false) {
+    const appIds = new Set(Array.from(doc.querySelectorAll(`${serviceType} > Address > P[type="APPID"]`)).map(appId => appId.textContent));
+    const range = 
+    // eslint-disable-next-line no-nested-ternary
+    serviceType === 'SMV'
+        ? smvAppIdRange
+        : type1A
+            ? gseTripAppIdRange
+            : gseAppIdRange;
+    return () => {
+        const uniqueAppId = range.find(appId => !appIds.has(appId));
+        if (uniqueAppId)
+            appIds.add(uniqueAppId);
+        return uniqueAppId !== null && uniqueAppId !== void 0 ? uniqueAppId : null;
+    };
+}
+
 const gSEselectors = {
     MinTime: ':scope > MinTime',
     MaxTime: ':scope > MaxTime',
@@ -16877,7 +16952,7 @@ function checkTimeAddressDiff(gSE, attrs, instType) {
     return checkGSEDiff(gSE, timeAttrs, instType);
 }
 /** @returns a new [[`tag`]] element owned by [[`doc`]]. */
-function createElement(doc, tag, attrs) {
+function createElement$1(doc, tag, attrs) {
     const element = doc.createElementNS(doc.documentElement.namespaceURI, tag);
     Object.entries(attrs)
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -16889,7 +16964,7 @@ function updateGseTimes(gSE, attr) {
     const actions = [];
     if (attr.MinTime !== undefined) {
         if (attr.MinTime !== null) {
-            const newMinTime = createElement(gSE.ownerDocument, 'MinTime', {
+            const newMinTime = createElement$1(gSE.ownerDocument, 'MinTime', {
                 unit: 's',
                 multiplier: 'm',
             });
@@ -16906,7 +16981,7 @@ function updateGseTimes(gSE, attr) {
     }
     if (attr.MaxTime !== undefined) {
         if (attr.MaxTime !== null) {
-            const newMaxTime = createElement(gSE.ownerDocument, 'MaxTime', {
+            const newMaxTime = createElement$1(gSE.ownerDocument, 'MaxTime', {
                 unit: 's',
                 multiplier: 'm',
             });
@@ -16925,12 +17000,12 @@ function updateGseTimes(gSE, attr) {
 }
 function updateGseAddress(gSE, attrs, instType) {
     const actions = [];
-    const newAddress = createElement(gSE.ownerDocument, 'Address', {});
+    const newAddress = createElement$1(gSE.ownerDocument, 'Address', {});
     Object.entries(attrs)
         // eslint-disable-next-line @typescript-eslint/no-unused-vars
         .filter(([_, value]) => value !== null)
         .forEach(([type, value]) => {
-        const child = createElement(gSE.ownerDocument, 'P', { type });
+        const child = createElement$1(gSE.ownerDocument, 'P', { type });
         if (instType)
             child.setAttributeNS('http://www.w3.org/2001/XMLSchema-instance', 'xsi:type', `tP_${type}`);
         child.textContent = value;
@@ -16961,7 +17036,75 @@ function updateGSE(gSE, attrs, instType) {
         : [];
     return addressActions.concat(timeActions);
 }
+/** @returns Action inserting new `GSE` to [[`connectedAp`]] element */
+function addGSE(connectedAp, attributes, options = { pTypes: {} }) {
+    var _a, _b;
+    const actions = [];
+    const gSE = createElement$1(connectedAp.ownerDocument, 'GSE', attributes);
+    const address = createElement$1(gSE.ownerDocument, 'Address', {});
+    if (!options.pTypes['MAC-Address'])
+        // eslint-disable-next-line no-param-reassign
+        options.pTypes['MAC-Address'] = mACAddressGenerator(connectedAp.ownerDocument, 'GSE')();
+    if (!options.pTypes.APPID)
+        // eslint-disable-next-line no-param-reassign
+        options.pTypes.APPID = appIdGenerator(connectedAp.ownerDocument, 'GSE')();
+    Object.entries(options.pTypes)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        .filter(([_, value]) => value !== null)
+        .forEach(([type, value]) => {
+        const child = createElement$1(gSE.ownerDocument, 'P', { type });
+        child.textContent = value;
+        address.appendChild(child);
+    });
+    actions.push({
+        parent: connectedAp,
+        node: gSE,
+        reference: getReference(connectedAp, 'GSE'),
+    });
+    actions.push({
+        parent: gSE,
+        node: address,
+        reference: getReference(gSE, 'Address'),
+    });
+    const newMinTime = createElement$1(gSE.ownerDocument, 'MinTime', {
+        unit: 's',
+        multiplier: 'm',
+    });
+    newMinTime.textContent = (_a = options.minTime) !== null && _a !== void 0 ? _a : '10';
+    actions.push({
+        parent: gSE,
+        node: newMinTime,
+        reference: getReference(gSE, 'MinTime'),
+    });
+    const newMaxTime = createElement$1(gSE.ownerDocument, 'MaxTime', {
+        unit: 's',
+        multiplier: 'm',
+    });
+    newMaxTime.textContent = (_b = options.maxTime) !== null && _b !== void 0 ? _b : '10000';
+    actions.push({
+        parent: gSE,
+        node: newMaxTime,
+        reference: getReference(gSE, 'MaxTime'),
+    });
+    return actions;
+}
 
+/** @returns ConnectedAP element for any given element within an AccessPoint */
+function connectedAp(parent) {
+    var _a, _b;
+    const apName = (_a = parent.closest('AccessPoint')) === null || _a === void 0 ? void 0 : _a.getAttribute('name');
+    const iedName = (_b = parent.closest('IED')) === null || _b === void 0 ? void 0 : _b.getAttribute('name');
+    return parent.ownerDocument.querySelector(`ConnectedAP[iedName="${iedName}"][apName="${apName}"]`);
+}
+
+function createElement(doc, tag, attrs) {
+    const element = doc.createElementNS(doc.documentElement.namespaceURI, tag);
+    Object.entries(attrs)
+        // eslint-disable-next-line @typescript-eslint/no-unused-vars
+        .filter(([_, value]) => value !== null)
+        .forEach(([name, value]) => element.setAttribute(name, value));
+    return element;
+}
 /** @returns action array to update all `GSEControl` attributes */
 function updateGseControl(gseControl, attrs) {
     const ctrlBlockUpdates = [
@@ -16989,6 +17132,58 @@ function updateGseControl(gseControl, attrs) {
         updateGseAction.push({ element: gSE, attributes: { cbName: attrs.name } });
     }
     return ctrlBlockUpdates.concat(extRefUpdates, objRefUpdates, updateGseAction);
+}
+function uniqueGSEControlName(ln0) {
+    const nameCore = 'newGSEControl';
+    const siblingNames = Array.from(ln0.querySelectorAll('GSEControl')).map(child => { var _a; return (_a = child.getAttribute('name')) !== null && _a !== void 0 ? _a : child.tagName; });
+    if (!siblingNames.length)
+        return `${nameCore}_001`;
+    let newName = '';
+    // eslint-disable-next-line no-plusplus
+    let i = 1;
+    newName = `${nameCore}_${i.toString().padStart(3, '0')}`;
+    while (i < siblingNames.length + 1) {
+        if (!siblingNames.includes(newName))
+            break;
+        i += 1;
+        newName = `${nameCore}_${i.toString().padStart(3, '0')}`;
+    }
+    return newName;
+}
+/** Function processing GSEControl creation
+ * @parent Parent element such as `LN0`, `LDevice`, `AccessPoint` and `IED`
+ * @attributes GSEControl element attributes. Required but missing attributes
+ *             will be added automatically
+ * @returns Action inserting new `GSEControl` to [[`parent`]] element
+ * */
+function addGSEControl(parent, attributes = {}) {
+    const ln0 = parent.tagName === 'LN0' ? parent : parent.querySelector('LN0');
+    if (!ln0)
+        return null;
+    if (!attributes.name)
+        attributes.name = uniqueGSEControlName(ln0);
+    if (!attributes.confRev)
+        attributes.confRev = '1';
+    if (!attributes.type)
+        attributes.type = 'GOOSE';
+    if (!attributes.appId)
+        attributes.appId = `${identity(ln0)}>${uniqueGSEControlName(ln0)}`;
+    const gseControl = createElement(ln0.ownerDocument, 'GSEControl', attributes);
+    const actions = [];
+    actions.push({
+        parent: ln0,
+        node: gseControl,
+        reference: getReference(ln0, 'GSEControl'),
+    });
+    const connAp = connectedAp(ln0);
+    if (!connAp)
+        return actions;
+    const ldInst = ln0.closest('LDevice').getAttribute('inst');
+    const cbName = gseControl.getAttribute('name');
+    if (!ldInst || !cbName)
+        return actions;
+    const gseAttrs = { ldInst, cbName };
+    return actions.concat(addGSE(connAp, gseAttrs));
 }
 
 let GseControlElementEditor = class GseControlElementEditor extends s$3 {
@@ -17326,7 +17521,7 @@ let GseControlEditor = class GseControlEditor extends s$3 {
         var _a, _b, _c;
         return y `
       <mwc-dialog heading="Select Data Set">
-        <oscd-filtered-list activatable @selected=${() => this.selectDataSet()}
+        <oscd-filtered-list activatable @action=${() => this.selectDataSet()}
           >${Array.from((_c = (_b = (_a = this.selectedGseControl) === null || _a === void 0 ? void 0 : _a.parentElement) === null || _b === void 0 ? void 0 : _b.querySelectorAll('DataSet')) !== null && _c !== void 0 ? _c : []).map(dataSet => {
             var _a, _b, _c, _d, _e;
             return y `<mwc-list-item
@@ -17353,7 +17548,7 @@ let GseControlEditor = class GseControlEditor extends s$3 {
           >
             <mwc-icon-button
               slot="change"
-              icon="change_circle"
+              icon="swap_vert"
               ?disabled=${!!findCtrlBlockSubscription(this.selectedGseControl)
                 .length}
               @click=${() => this.selectDataSetDialog.show()}
@@ -17375,6 +17570,7 @@ let GseControlEditor = class GseControlEditor extends s$3 {
       >${Array.from(this.doc.querySelectorAll('IED')).flatMap(ied => {
             const ieditem = y `<mwc-list-item
             class="listitem header"
+            hasMeta
             noninteractive
             graphic="icon"
             value="${Array.from(ied.querySelectorAll('GSEControl'))
@@ -17386,6 +17582,16 @@ let GseControlEditor = class GseControlEditor extends s$3 {
           >
             <span>${ied.getAttribute('name')}</span>
             <mwc-icon slot="graphic">developer_board</mwc-icon>
+            <mwc-icon-button
+              slot="meta"
+              icon="playlist_add"
+              @click=${() => {
+                const insert = addGSEControl(ied);
+                if (insert)
+                    this.dispatchEvent(newEditEvent(insert));
+                this.requestUpdate();
+            }}
+            ></mwc-icon-button>
           </mwc-list-item>
           <li divider role="separator"></li>`;
             const gseControls = Array.from(ied.querySelectorAll('GSEControl')).map(gseControl => y `<mwc-list-item
@@ -17456,6 +17662,10 @@ GseControlEditor.styles = i$6 `
 
     mwc-list-item {
       --mdc-list-item-meta-size: 48px;
+    }
+
+    mwc-icon-button[icon='playlist_add'] {
+      pointer-events: all;
     }
 
     @media (max-width: 950px) {
@@ -17913,7 +18123,7 @@ let SampledValueControlEditor = class SampledValueControlEditor extends s$3 {
           >
             <mwc-icon-button
               slot="change"
-              icon="change_circle"
+              icon="swap_vert"
               ?disabled=${!!findCtrlBlockSubscription(this.selectedSampledValueControl).length}
               @click=${() => this.selectDataSetDialog.show()}
             ></mwc-icon-button

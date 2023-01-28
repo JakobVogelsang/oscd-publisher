@@ -10,3 +10,14 @@ export declare function checkGSEDiff(gSE: Element, attrs: Record<string, string 
  * @returns Action array updating GSEs children Address, MinTine and MaxTime
  * */
 export declare function updateGSE(gSE: Element, attrs: Record<string, string | null>, instType?: boolean): (Insert | Remove)[];
+declare type GSeOptions = {
+    pTypes: Record<string, string | null>;
+    minTime?: string;
+    maxTime?: string;
+};
+/** @returns Action inserting new `GSE` to [[`connectedAp`]] element */
+export declare function addGSE(connectedAp: Element, attributes: {
+    ldInst: string;
+    cbName: string;
+}, options?: GSeOptions): Insert[];
+export {};
